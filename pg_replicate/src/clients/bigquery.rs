@@ -1,5 +1,6 @@
 use std::{collections::HashSet, fs};
 
+use bigdecimal::{BigDecimal, Zero};
 use bytes::{Buf, BufMut};
 use futures::StreamExt;
 use gcp_bigquery_client::yup_oauth2::parse_service_account_key;
@@ -343,6 +344,7 @@ impl BigQueryClient {
             Cell::I16(i) => s.push_str(&format!("{i}")),
             Cell::I32(i) => s.push_str(&format!("{i}")),
             Cell::I64(i) => s.push_str(&format!("{i}")),
+            Cell::BigDecimal(b) => s.push_str(&format!("{b}")),
             Cell::TimeStamp(t) => s.push_str(&format!("'{t}'")),
             Cell::Bytes(b) => {
                 let bytes: String = b.iter().map(|b| *b as char).collect();
@@ -534,6 +536,11 @@ impl Message for TableRow {
                         ::prost::encoding::int64::encode(tag, i, buf);
                     }
                 }
+                Cell::BigDecimal(b) => {
+                    if *b != BigDecimal::zero() {
+                        ::prost::encoding::string::encode(tag, &b.to_string(), buf);
+                    }
+                }
                 Cell::TimeStamp(t) => {
                     if !t.is_empty() {
                         ::prost::encoding::string::encode(tag, t, buf);
@@ -604,6 +611,13 @@ impl Message for TableRow {
                         0
                     }
                 }
+                Cell::BigDecimal(b) => {
+                    if *b != BigDecimal::zero() {
+                        ::prost::encoding::string::encoded_len(tag, &b.to_string())
+                    } else {
+                        0
+                    }
+                }
                 Cell::TimeStamp(t) => {
                     if !t.is_empty() {
                         ::prost::encoding::string::encoded_len(tag, t)
@@ -633,6 +647,7 @@ impl Message for TableRow {
                 Cell::I16(i) => *i = 0,
                 Cell::I32(i) => *i = 0,
                 Cell::I64(i) => *i = 0,
+                Cell::BigDecimal(b) => *b = BigDecimal::zero(),
                 Cell::TimeStamp(t) => t.clear(),
                 Cell::Bytes(b) => b.clear(),
             }

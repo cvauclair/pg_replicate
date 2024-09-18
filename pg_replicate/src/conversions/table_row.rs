@@ -16,6 +16,7 @@ pub enum Cell {
     I16(i16),
     I32(i32),
     I64(i64),
+    BigDecimal(bigdecimal::BigDecimal),
     TimeStamp(String),
     Bytes(Vec<u8>),
 }

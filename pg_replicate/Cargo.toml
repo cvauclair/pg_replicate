@@ -19,6 +19,7 @@ required-features = ["stdout"]
 
 [dependencies]
 async-trait = { workspace = true }
+bigdecimal = "0.4.5"
 bytes = { workspace = true }
 chrono = { workspace = true, features = ["serde"] }
 duckdb = { workspace = true, optional = true }

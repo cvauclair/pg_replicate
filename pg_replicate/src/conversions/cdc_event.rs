@@ -4,6 +4,7 @@ use std::{
     str::{from_utf8, ParseBoolError, Utf8Error},
 };
 
+use bigdecimal::{BigDecimal, ParseBigDecimalError};
 use chrono::NaiveDateTime;
 use postgres_protocol::message::backend::{
     BeginBody, CommitBody, DeleteBody, InsertBody, LogicalReplicationMessage, RelationBody,
@@ -42,8 +43,11 @@ pub enum CdcEventConversionError {
     #[error("invalid timestamp value")]
     InvalidTimestamp(#[from] chrono::ParseError),
 
-    #[error("unsupported type")]
+    #[error("unsupported type {0}")]
     UnsupportedType(String),
+
+    #[error("parsing error {0}")]
+    ParsingError(String),
 
     #[error("out of range timestamp")]
     OutOfRangeTimestamp,
@@ -83,7 +87,14 @@ impl CdcEventConverter {
                 let val: bool = val.parse()?;
                 Ok(Cell::Bool(val))
             }
-            // Type::BYTEA => Ok(Value::Bytes(bytes.to_vec())),
+            Type::BYTEA => Ok(Cell::Bytes(bytes.to_vec())),
+            Type::NUMERIC => {
+                let val = from_utf8(bytes)?;
+                let val: BigDecimal = val.parse().map_err(|err: ParseBigDecimalError| {
+                    CdcEventConversionError::ParsingError(format!("error parsing numeric: {err}"))
+                })?;
+                Ok(Cell::BigDecimal(val))
+            }
             Type::CHAR | Type::BPCHAR | Type::VARCHAR | Type::NAME | Type::TEXT => {
                 let val = from_utf8(bytes)?;
                 Ok(Cell::String(val.to_string()))
