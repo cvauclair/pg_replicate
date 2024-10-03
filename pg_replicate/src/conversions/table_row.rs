@@ -184,7 +184,8 @@ impl TableRowConverter {
                         }
                     }
                 } else {
-                    let val = row.try_get::<PgNumeric>(i)
+                    let val = row
+                        .try_get::<PgNumeric>(i)
                         .map_err(|e| TableRowConversionError::ParsingError(Box::new(e)))?;
                     Cell::BigDecimal(BigDecimal::try_from(&val)?)
                 };

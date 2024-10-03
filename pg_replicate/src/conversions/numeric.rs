@@ -36,7 +36,9 @@ pub enum PgNumeric {
 }
 
 #[derive(Debug, Clone, Copy)]
+#[allow(dead_code)] // that's used by debug in the error impl
 struct InvalidNumericSign(u16);
+
 impl ::std::fmt::Display for InvalidNumericSign {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> ::std::fmt::Result {
         f.write_str("sign for numeric field was not one of 0, 0x4000, 0xC000")
@@ -59,9 +61,7 @@ impl<'a> TryFrom<&'a PgNumeric> for BigDecimal {
                 scale,
                 ref digits,
             } => (Sign::Minus, weight, scale, digits),
-            PgNumeric::NaN => {
-                return Err(Box::from("NaN is not (yet) supported in BigDecimal"))
-            }
+            PgNumeric::NaN => return Err(Box::from("NaN is not (yet) supported in BigDecimal")),
         };
 
         let mut result = BigUint::default();
@@ -79,8 +79,8 @@ impl<'a> TryFrom<&'a PgNumeric> for BigDecimal {
 }
 
 impl<'a> FromSql<'a> for PgNumeric {
-    fn from_sql(ty: &Type, raw: &'a [u8]) -> Result<Self, Box<dyn Error + Send + Sync>> {
-        let mut bytes = raw.clone();
+    fn from_sql(_ty: &Type, raw: &'a [u8]) -> Result<Self, Box<dyn Error + Send + Sync>> {
+        let mut bytes = raw;
         let digit_count = bytes.read_u16::<NetworkEndian>()?;
         let mut digits = Vec::with_capacity(digit_count as usize);
         let weight = bytes.read_i16::<NetworkEndian>()?;
@@ -105,13 +105,8 @@ impl<'a> FromSql<'a> for PgNumeric {
             invalid => Err(Box::new(InvalidNumericSign(invalid))),
         }
     }
-    
-    fn accepts(ty: &Type) -> bool {
-        match *ty {
-            Type::NUMERIC => true,
-            _ => false,
-        }
-    }
 
-    
+    fn accepts(ty: &Type) -> bool {
+        matches!(*ty, Type::NUMERIC)
+    }
 }

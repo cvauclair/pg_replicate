@@ -89,10 +89,11 @@ impl CdcEventConverter {
             }
             Type::BYTEA => {
                 let val = from_utf8(bytes)?.replace("\\x", "");
-                let val = hex::decode(val)
-                    .map_err(|err| CdcEventConversionError::ParsingError(format!("Parsing bytea {err}")))?;
+                let val = hex::decode(val).map_err(|err| {
+                    CdcEventConversionError::ParsingError(format!("Parsing bytea {err}"))
+                })?;
                 Ok(Cell::Bytes(val))
-            },
+            }
             Type::NUMERIC => {
                 let val = from_utf8(bytes)?;
                 let val: BigDecimal = val.parse().map_err(|err: ParseBigDecimalError| {
