@@ -20,6 +20,7 @@ required-features = ["stdout"]
 [dependencies]
 async-trait = { workspace = true }
 bigdecimal = "0.4.5"
+byteorder = "1.5.0"
 bytes = { workspace = true }
 chrono = { workspace = true, features = ["serde"] }
 duckdb = { workspace = true, optional = true }
@@ -28,6 +29,7 @@ gcp-bigquery-client = { workspace = true, optional = true, features = [
     "rust-tls",
     "aws-lc-rs",
 ] }
+hex = "0.4.3"
 pin-project-lite = { workspace = true }
 postgres-protocol = { workspace = true }
 prost = { workspace = true, optional = true }

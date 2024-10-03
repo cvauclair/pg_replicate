@@ -1,3 +1,4 @@
+use bigdecimal::BigDecimal;
 use chrono::{DateTime, NaiveDateTime, Utc};
 use postgres_protocol::types;
 use thiserror::Error;
@@ -7,6 +8,8 @@ use tokio_postgres::{
 };
 
 use crate::{pipeline::batching::BatchBoundary, table::ColumnSchema};
+
+use super::numeric::PgNumeric;
 
 #[derive(Debug)]
 pub enum Cell {
@@ -39,6 +42,9 @@ pub enum TableRowConversionError {
 
     #[error("failed to get timestamp nanos from {0}")]
     NoTimestampNanos(DateTime<Utc>),
+
+    #[error("parsing error {0}")]
+    ParsingError(#[from] Box<dyn std::error::Error + Send + Sync>),
 }
 
 pub struct TableRowConverter;
@@ -165,6 +171,22 @@ impl TableRowConverter {
                 } else {
                     let val = row.get::<i64>(i);
                     Cell::I64(val)
+                };
+                Ok(val)
+            }
+            Type::NUMERIC => {
+                let val = if column_schema.nullable {
+                    match row.try_get::<PgNumeric>(i) {
+                        Ok(val) => Cell::BigDecimal(BigDecimal::try_from(&val)?),
+                        Err(_) => {
+                            //TODO: Only return null if the error is WasNull from tokio_postgres crate
+                            Cell::Null
+                        }
+                    }
+                } else {
+                    let val = row.try_get::<PgNumeric>(i)
+                        .map_err(|e| TableRowConversionError::ParsingError(Box::new(e)))?;
+                    Cell::BigDecimal(BigDecimal::try_from(&val)?)
                 };
                 Ok(val)
             }
